@@ -2,6 +2,13 @@
 
 Welcome to the 'reminders' project. This started as a tool to help automate sending email based on data in an Excel spreadsheet for my wife. Since I'm not a Visual Basic programmer and don't even have Excel installed on my computer, I reached for Python to help.
 
+## Installation
+
+The program uses some additional Python modules. So, you will need to install. Here's the suggested method for installing the modules:
+```sh
+python3 -m pip install --user --upgrade -r requirements.txt
+```
+
 ## Usage
 
 This program includes many fields to generate emails. A configuration file is required to specify the information to generate the email -- it was too much to try and specify all the required parameters as CLI options.

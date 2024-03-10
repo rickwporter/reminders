@@ -1,0 +1,5 @@
+# These are modules used in the runtime
+# NOTE: these are the test versions -- it may work with other versions (experiment at your own risk)
+configfile (~=1.2.4)
+pandas (~=2.2.1)
+prettytable (~=3.10.0)
