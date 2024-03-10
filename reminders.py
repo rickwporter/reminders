@@ -170,7 +170,7 @@ class Reminders:
     def check_config(self) -> List[str]:
         """
         Insures all the "required" fields have been filled in.
-        
+
         Returns a list with any errors.
         """
         errors = []
