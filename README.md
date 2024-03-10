@@ -70,8 +70,54 @@ The **preamble** and **close** allow for templating from the User values. The fo
 
 The **columns** is a comma delimted list of Action columns in the table sent to users. The **align** is used to change from the default alignment (centered); it is a comma delimited list of the form `column-name:alignment` where alignment is `l`, `r`, or `c`.
 
+## Example
+
+There is a short example in `example/`. The example allows you to see how this could be used, and provides a little comedic relief. It is best to run in interactive mode (using `-i|--interactive` flag) so you can see what the table would look like for the provided data.
+
+Here's an example run:
+```sh
+~/reminders/example> ../reminders.py -c config.ini -i
+Barney Rubble: 2
+What should be done with Barney Rubble's action?
+  skip - skip sending email to this user
+  email - send email to barney@slaterockandgravel.com
+  show - show the actions (another choice allowed)
+  exit - do NOT send anymore emails to anyone
+Choose skip, email, show, or exit: show
++---------+------------------+--------------+------------+-------------------------------------------------------+
+|    ID   | Action           |     User     |  Due Date  | Notes                                                 |
++---------+------------------+--------------+------------+-------------------------------------------------------+
+| Rubble1 | Get married      | Barney/Betty | 1963-06-20 | Left open from a long time ago                        |
+|   SG2   | Show up to work  | Fred/ Barney | 1980-03-17 | Need to do this every day, so date is far in the past |
++---------+------------------+--------------+------------+-------------------------------------------------------+
+What should be done with Barney Rubble's action?
+Choose skip, email, show, or exit: skip
+Betty Rubble: 1
+What should be done with Betty Rubble's action?
+  skip - skip sending email to this user
+  email - send email to betty.rubble@hotmail.com
+  show - show the actions (another choice allowed)
+  exit - do NOT send anymore emails to anyone
+Choose skip, email, show, or exit: skip
+Fred Flintstone: 1
+What should be done with Fred Flintstone's action?
+  skip - skip sending email to this user
+  email - send email to fred@slaterockandgravel.com
+  show - show the actions (another choice allowed)
+  exit - do NOT send anymore emails to anyone
+Choose skip, email, show, or exit: show
++-----+------------------+--------------+------------+-------------------------------------------------------+
+|  ID | Action           |     User     |  Due Date  | Notes                                                 |
++-----+------------------+--------------+------------+-------------------------------------------------------+
+| SG2 | Show up to work  | Fred/ Barney | 1980-03-17 | Need to do this every day, so date is far in the past |
++-----+------------------+--------------+------------+-------------------------------------------------------+
+What should be done with Fred Flintstone's action?
+Choose skip, email, show, or exit: exit
+No more users
+~/reminders/example> 
+```
+
 ## TODO
-* Provide an example
 * Write tests
 * Create a Docker container
 
