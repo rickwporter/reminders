@@ -16,7 +16,7 @@ These options may change over time, so consutling the current `--help` is the be
 ## Configuration File
 
 The configuration file is the means for providing the inputs to generate the emails from an Excel spreadsheet. It has several sections for improved understanding. The sections are:
-* **source** - spreadsheet tabs and fields (e.g. )
+* **source** - spreadsheet tabs and fields
 * **email** - server and address information
 * **message** - information included in the message message
 
@@ -51,17 +51,17 @@ Here are the fields:
 
 ### Section "message"
 
-This defines the body of the emails. Each email body contains a **preamble**, a table using the **columns** from the user actions, and a **close**.
+This section defines the body of the emails. Each email body contains a **preamble**, a table using the **columns** from the user actions, and a **close**.
 
 Here are the fields:
 * **preamble** - templatized greeting for the message
 * **columns** - lists columns in table in the email sent to each user
-* **align** - default alignment is centered. This field is a comma delimted field used to change alignment for individual columns.
+* **align** - comma delimted field used to change alignment for individual columns.
 * **close** - templatized closing for the message
 
 The **preamble** and **close** allow for templating from the User values. The format is HTML for special things (e.g. `<br/>`, `<p/>`). The `{}` denotes a field that will be replaced with something from the User tab. For example, `{First Name}` would get replace with the value from the user's `First Name` column in the user tab.
 
-The **columns** is a comma delimted list of Action columns in the table sent to users. The **align** is used to change from the default alignment; it is a comma delimited list of the form `column-name:alignment` where alignment is `l`, `r`, or `c`.
+The **columns** is a comma delimted list of Action columns in the table sent to users. The **align** is used to change from the default alignment (centered); it is a comma delimited list of the form `column-name:alignment` where alignment is `l`, `r`, or `c`.
 
 ## TODO
 * Provide an example
