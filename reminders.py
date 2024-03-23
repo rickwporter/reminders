@@ -205,20 +205,19 @@ class Reminders:
         dictionaries, where the dictionary property names align with the sheet header
         column strings.
         """
-        xls = ExcelFile(filename)
+        with ExcelFile(filename) as xls:
+            sheet = xls.parse(sheetname)
+            values = sheet.to_dict()
+            headers = values.keys()
+            num_values = max([len(_.keys()) for _ in values.values()])
 
-        sheet = xls.parse(sheetname)
-        values = sheet.to_dict()
-        headers = values.keys()
-        num_values = max([len(_.keys()) for _ in values.values()])
+            result = []
+            for row in range(num_values):
+                item = {k: values.get(k, {}).get(row, '') for k in headers}
+                item[ROW_HEADER] = f"{sheetname}:{row + 1}"
+                result.append(item)
 
-        result = []
-        for row in range(num_values):
-            item = {k: values.get(k, {}).get(row, '') for k in headers}
-            item[ROW_HEADER] = f"{sheetname}:{row + 1}"
-            result.append(item)
-
-        return result
+            return result
 
     def findUser(self, users: List[Dict], username: str) -> Dict:
         """
