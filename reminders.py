@@ -58,6 +58,15 @@ class MissingUser(Exception):
         super().__init__(message)
 
 
+class AmbiguousUser(Exception):
+    """
+    Simple wrapper to format errors
+    """
+    def __init__(self, username: str, matches: List[str]):
+        message = f"Ambiguous result for '{username}' matches: {', '.join(matches)}"
+        super().__init__(message)
+
+
 class SafeConfigParser(ConfigParser):
     """
     Class with a get that does NOT throw when item does NOT exist
@@ -223,7 +232,7 @@ class Reminders:
         """
         Search the whole list of users to find a user who has something in a field that matches (case-insensitive)
         """
-        # TODO: make sure there are not multiple matches??
+        matches = []
         searchname = username.lower().strip()
         for user in users:
             for v in user.values():
@@ -231,8 +240,17 @@ class Reminders:
                     continue
 
                 if searchname in v.lower():
-                    return user
-        return None
+                    # if we find a match, break out of the inner loop
+                    matches.append(user)
+                    break
+
+        if not matches:
+            return None
+
+        if len(matches) > 1:
+            raise AmbiguousUser(username, [_.get(ROW_HEADER) for _ in matches])
+
+        return matches[0]
 
     def correlate(self, users: List[Dict], actions: List[Dict]) -> List[Tuple[Dict, List[Dict]]]:
         """

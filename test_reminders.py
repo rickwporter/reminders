@@ -1,6 +1,7 @@
 import unittest
 
 from datetime import datetime
+from reminders import AmbiguousUser
 from reminders import Reminders
 from reminders import ROW_HEADER
 
@@ -56,10 +57,6 @@ class TestReminders(unittest.TestCase):
         self.assertEqual(fred, uut.findUser(users, 'FreD@slate'))  # email case insensitive
         self.assertEqual(fred, uut.findUser(users, 'Fred flint'))  # user case insensitive
 
-        # TODO: fix duplicate error -- should be an error
-        self.assertEqual(fred, uut.findUser(users, 'slate'))
-        self.assertEqual(fred, uut.findUser(users, 'flintstone'))
-
         # find Wilma
         self.assertEqual(wilma, uut.findUser(users, 'Wilma F'))
         self.assertEqual(wilma, uut.findUser(users, 'wf'))  # aliases
@@ -73,3 +70,9 @@ class TestReminders(unittest.TestCase):
         # find Betty
         self.assertEqual(betty, uut.findUser(users, 'Betty R'))
         self.assertEqual(betty, uut.findUser(users, 'betty.rubble@'))  # email case insensitive
+
+        # No such finding is NOT an error
+        self.assertIsNone(uut.findUser(users, 'Bambam'))
+
+        self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'slate'))
+        self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'flintstone'))
