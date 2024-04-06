@@ -234,7 +234,7 @@ class Reminders:
 
             return result
 
-    def findUser(self, users: List[Dict], username: str) -> Dict:
+    def find_user(self, users: List[Dict], username: str) -> Dict:
         """
         Search the whole list of users to find a user who has something in a field that matches (case-insensitive)
         """
@@ -269,7 +269,7 @@ class Reminders:
         uname_actions = {}
         for action in actions:
             for username in action.get(self.hdr_user).split('/'):
-                user = self.findUser(users, username)
+                user = self.find_user(users, username)
                 if not user:
                     raise MissingUser(username, action.get(self.hdr_id), action.get(ROW_HEADER))
                 uname = user.get(self.hdr_user)
@@ -278,7 +278,7 @@ class Reminders:
                 uname_actions.update({uname: uact})
 
         # convert the internal uname_actions dictionary into a list of tuple(user, list(actions))
-        return [(self.findUser(users, uname), uact) for uname, uact in uname_actions.items()]
+        return [(self.find_user(users, uname), uact) for uname, uact in uname_actions.items()]
 
     def _format(self, value: Any) -> str:
         """
@@ -510,7 +510,7 @@ class Reminders:
 
         # reduce the list to focus only on the specified people
         if args.person:
-            user = self.findUser(users, args.person)
+            user = self.find_user(users, args.person)
             user_actions = [(u, a) for (u, a) in user_actions if u == user]
 
         # check after filtering

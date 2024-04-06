@@ -59,31 +59,31 @@ class TestReminders(unittest.TestCase):
         betty = users[3]
 
         # find Fred
-        self.assertEqual(fred, uut.findUser(users, 'Fred'))
-        self.assertEqual(fred, uut.findUser(users, 'FF'))  # aliases
-        self.assertEqual(fred, uut.findUser(users, 'ff'))  # aliases, lowercase
-        self.assertEqual(fred, uut.findUser(users, 'FreD@slate'))  # email case insensitive
-        self.assertEqual(fred, uut.findUser(users, 'Fred flint'))  # user case insensitive
+        self.assertEqual(fred, uut.find_user(users, 'Fred'))
+        self.assertEqual(fred, uut.find_user(users, 'FF'))  # aliases
+        self.assertEqual(fred, uut.find_user(users, 'ff'))  # aliases, lowercase
+        self.assertEqual(fred, uut.find_user(users, 'FreD@slate'))  # email case insensitive
+        self.assertEqual(fred, uut.find_user(users, 'Fred flint'))  # user case insensitive
 
         # find Wilma
-        self.assertEqual(wilma, uut.findUser(users, 'Wilma F'))
-        self.assertEqual(wilma, uut.findUser(users, 'wf'))  # aliases
-        self.assertEqual(wilma, uut.findUser(users, 'wilma.Fl'))  # email case insensitive
+        self.assertEqual(wilma, uut.find_user(users, 'Wilma F'))
+        self.assertEqual(wilma, uut.find_user(users, 'wf'))  # aliases
+        self.assertEqual(wilma, uut.find_user(users, 'wilma.Fl'))  # email case insensitive
 
         # find Barney
-        self.assertEqual(barney, uut.findUser(users, 'Barney R'))
-        self.assertEqual(barney, uut.findUser(users, 'BR'))  # aliases
-        self.assertEqual(barney, uut.findUser(users, 'barney@'))  # email case insensitive
+        self.assertEqual(barney, uut.find_user(users, 'Barney R'))
+        self.assertEqual(barney, uut.find_user(users, 'BR'))  # aliases
+        self.assertEqual(barney, uut.find_user(users, 'barney@'))  # email case insensitive
 
         # find Betty
-        self.assertEqual(betty, uut.findUser(users, 'Betty R'))
-        self.assertEqual(betty, uut.findUser(users, 'betty.rubble@'))  # email case insensitive
+        self.assertEqual(betty, uut.find_user(users, 'Betty R'))
+        self.assertEqual(betty, uut.find_user(users, 'betty.rubble@'))  # email case insensitive
 
         # No such finding is NOT an error
-        self.assertIsNone(uut.findUser(users, 'Bambam'))
+        self.assertIsNone(uut.find_user(users, 'Bambam'))
 
-        self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'slate'))
-        self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'flintstone'))
+        self.assertRaises(AmbiguousUser, lambda: uut.find_user(users, 'slate'))
+        self.assertRaises(AmbiguousUser, lambda: uut.find_user(users, 'flintstone'))
 
     def test_reminders_config_example(self):
         uut = Reminders()
