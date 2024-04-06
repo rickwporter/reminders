@@ -6,10 +6,110 @@ from typing import Tuple
 
 from datetime import datetime
 from reminders import AmbiguousUser
+from reminders import Format
 from reminders import MissingUser
 from reminders import Reminders
 from reminders import ROW_HEADER
 
+ALL_ACTIONS_HTML = """\
+<table frame="box" rules="all">
+    <thead>
+        <tr>
+            <th style="padding-left: 1em; padding-right: 1em; text-align: center">ID</th>
+            <th style="padding-left: 1em; padding-right: 1em; text-align: center">Action</th>
+            <th style="padding-left: 1em; padding-right: 1em; text-align: center">User</th>
+            <th style="padding-left: 1em; padding-right: 1em; text-align: center">Due Date</th>
+            <th style="padding-left: 1em; padding-right: 1em; text-align: center">Notes</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">SG1</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Break big rocks into small ones</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">Fred</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">2030-03-24</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Far in the future</td>
+        </tr>
+        <tr>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">SG2</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Show up to work </td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">Fred/ Barney</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">1980-03-17</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Need to do this every day, so date is far in the past</td>
+        </tr>
+        <tr>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">FS1</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Get married</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">Fred/Wilma</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">1963-06-20</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Done a long time ago, and closed</td>
+        </tr>
+        <tr>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">Rubble1</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Get married</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">Barney/Betty</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: center; vertical-align: top">1963-06-20</td>
+            <td style="padding-left: 1em; padding-right: 1em; text-align: left; vertical-align: top">Left open from a long time ago</td>
+        </tr>
+    </tbody>
+</table>"""
+
+ALL_ACTIONS_JSON = """\
+[
+    [
+        "ID",
+        "Action",
+        "User",
+        "Due Date",
+        "Notes"
+    ],
+    {
+        "Action": "Break big rocks into small ones",
+        "Due Date": "2030-03-24",
+        "ID": "SG1",
+        "Notes": "Far in the future",
+        "User": "Fred"
+    },
+    {
+        "Action": "Show up to work ",
+        "Due Date": "1980-03-17",
+        "ID": "SG2",
+        "Notes": "Need to do this every day, so date is far in the past",
+        "User": "Fred/ Barney"
+    },
+    {
+        "Action": "Get married",
+        "Due Date": "1963-06-20",
+        "ID": "FS1",
+        "Notes": "Done a long time ago, and closed",
+        "User": "Fred/Wilma"
+    },
+    {
+        "Action": "Get married",
+        "Due Date": "1963-06-20",
+        "ID": "Rubble1",
+        "Notes": "Left open from a long time ago",
+        "User": "Barney/Betty"
+    }
+]"""
+
+ALL_ACTIONS_TEXT = """\
++---------+---------------------------------+--------------+------------+-------------------------------------------------------+
+|    ID   | Action                          |     User     |  Due Date  | Notes                                                 |
++---------+---------------------------------+--------------+------------+-------------------------------------------------------+
+|   SG1   | Break big rocks into small ones |     Fred     | 2030-03-24 | Far in the future                                     |
+|   SG2   | Show up to work                 | Fred/ Barney | 1980-03-17 | Need to do this every day, so date is far in the past |
+|   FS1   | Get married                     |  Fred/Wilma  | 1963-06-20 | Done a long time ago, and closed                      |
+| Rubble1 | Get married                     | Barney/Betty | 1963-06-20 | Left open from a long time ago                        |
++---------+---------------------------------+--------------+------------+-------------------------------------------------------+"""
+
+ALL_ACTIONS_CSV = """\
+ID,Action,User,Due Date,Notes\r
+SG1,Break big rocks into small ones,Fred,2030-03-24,Far in the future\r
+SG2,Show up to work ,Fred/ Barney,1980-03-17,"Need to do this every day, so date is far in the past"\r
+FS1,Get married,Fred/Wilma,1963-06-20,"Done a long time ago, and closed"\r
+Rubble1,Get married,Barney/Betty,1963-06-20,Left open from a long time ago\r
+"""
 
 class TestReminders(unittest.TestCase):
     def test_reminders_sheet_to_dict_errors(self):
@@ -164,3 +264,13 @@ class TestReminders(unittest.TestCase):
         # modify a user action to get a MissingUser exception
         actions[2].update({'User': 'Bam Bam'})
         self.assertRaises(MissingUser, lambda: uut.correlate(users, actions))
+
+    def test_reminders_table(self):
+        uut = Reminders()
+        uut.parse_config('example/config.ini')  # table creation needs the fields initialized
+        actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
+
+        self.assertEqual(ALL_ACTIONS_HTML, uut._create_table(actions, Format.HTML))
+        self.assertEqual(ALL_ACTIONS_TEXT, uut._create_table(actions, Format.TEXT))
+        self.assertEqual(ALL_ACTIONS_JSON, uut._create_table(actions, Format.JSON))
+        self.assertEqual(ALL_ACTIONS_CSV, uut._create_table(actions, Format.CSV))
