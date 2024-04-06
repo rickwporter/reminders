@@ -437,6 +437,33 @@ class Reminders:
             server.quit()
         return
 
+    def validate_users(self, users: List[Dict]) -> List[str]:
+        """
+        Verifies all users have all "required" fields
+        """
+        errors = []
+        for user in users:
+            reasons = []
+            if not user.get(self.hdr_email):
+                reasons.append('missing email')
+            if reasons:
+                errors.append(f"{user.get(self.hdr_user)} ({user.get(ROW_HEADER)}) error(s): {', '.join(reasons)}")
+
+        return errors
+
+    def validate_actions(self, actions: List[Dict]) -> List[str]:
+        errors = []
+        for action in actions:
+            reasons = []
+            if not action.get(self.hdr_user):
+                reasons.append('missing assignment')
+            if not action.get(self.hdr_due):
+                reasons.append('missing due date')
+            if reasons:
+                errors.append(f"{action.get(self.hdr_id)} ({action.get(ROW_HEADER)}) error(s): {', '.join(reasons)}")
+
+        return errors
+
     def run(self, *sysargs) -> int:
         """
         This is the "main" function that parses args, collects data, and prints it.
@@ -458,27 +485,16 @@ class Reminders:
             return 1
 
         users = self.sheet_to_dict(str(spreadsheet), self.tab_user)
-        missing_email = [_ for _ in users if not _.get(self.hdr_email)]
-        if missing_email:
-            messages = [f"{_.get(self.hdr_user)}, row {_.get(ROW_HEADER)}" for _ in missing_email]
-            self.print(f"Missing emails for: {NL}{NL.join(messages)}")
+        errors = self.validate_users(users)
+        if errors:
+            self.print(f"Invalid users: {NL}{NL.join(errors)}")
             return 2
 
         actions = self.sheet_to_dict(str(spreadsheet), self.tab_action)
-
-        # check for items with no-one assigned
-        unassigned = [_ for _ in actions if not _.get(self.hdr_user)]
-        if unassigned:
-            messages = [f"{_.get(self.hdr_id)}, row {_.get(ROW_HEADER)}" for _ in unassigned]
-            self.print(f"Missing assignments for: {NL}{NL.join(messages)}")
+        errors = self.validate_actions(actions)
+        if errors:
+            self.print(f"Invalid actions: {NL}{NL.join(errors)}")
             return 3
-
-        # check for missing due dates
-        missing_due = [_ for _ in actions if not _.get(self.hdr_due)]
-        if missing_due:
-            messages = [f"{_.get(self.hdr_id)}, row {_.get(ROW_HEADER)}" for _ in missing_due]
-            self.print(f"Missing due date for: {NL}{NL.join(messages)}")
-            return 4
 
         # start by filtering out non-Open items... may contain users no longer in the system
         actions = [_ for _ in actions if _.get(self.hdr_status) == 'Open']
