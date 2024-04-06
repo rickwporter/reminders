@@ -1,5 +1,9 @@
 import unittest
 
+from typing import Dict
+from typing import List
+from typing import Tuple
+
 from datetime import datetime
 from reminders import AmbiguousUser
 from reminders import Reminders
@@ -117,3 +121,41 @@ class TestReminders(unittest.TestCase):
         self.assertIn('Missing mail from address', errors)
         self.assertIn('Missing mail subject', errors)
         self.assertIn('Missing message table headers', errors)
+
+    def findActions(self, correlated: List[Tuple], firstname: str) -> List[Dict]:
+        for (user, userActions) in correlated:
+            if user.get('First') == firstname:
+                return userActions
+        return []
+
+    def test_reminders_correlate_example(self):
+        uut = Reminders()
+        uut.parse_config('example/config.ini')  # correlation needs the fields initialized
+        users = uut.sheet_to_dict('example/bedrock.xlsx', 'Users')
+        actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
+        correlated = uut.correlate(users, actions)
+        self.assertEqual(len(users), len(correlated))
+
+        items = self.findActions(correlated, 'Fred')
+        self.assertEqual(
+            set(['Actions:1', 'Actions:2', 'Actions:3']),
+            set([_.get(ROW_HEADER) for _ in items])
+        )
+
+        items = self.findActions(correlated, 'Barney')
+        self.assertEqual(
+            set(['Actions:2', 'Actions:4']),
+            set([_.get(ROW_HEADER) for _ in items])
+        )
+
+        items = self.findActions(correlated, 'Betty')
+        self.assertEqual(
+            set(['Actions:4']),
+            set([_.get(ROW_HEADER) for _ in items])
+        )
+
+        items = self.findActions(correlated, 'Wilma')
+        self.assertEqual(
+            set(['Actions:3']),
+            set([_.get(ROW_HEADER) for _ in items])
+        )
