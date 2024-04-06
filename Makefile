@@ -5,7 +5,7 @@ coverage_cmd ?= $(python_cmd) -m coverage
 default: help
 
 test: ## Runs the unit tests
-	$(python_cmd) -m unittest -v 
+	$(python_cmd) -m unittest -vv --locals
 
 coverage: ## Runs unit tests and measures coverage
 	$(coverage_cmd) run --branch --source=reminders -m unittest -v
