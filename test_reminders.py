@@ -76,3 +76,27 @@ class TestReminders(unittest.TestCase):
 
         self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'slate'))
         self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'flintstone'))
+
+    def test_reminders_parse_config_example(self):
+        uut = Reminders()
+        uut.parse_config('example/config.ini')
+        self.assertEqual('bedrock.xlsx', uut.spreadsheet)
+        self.assertEqual('Users', uut.tab_user)
+        self.assertEqual('Actions', uut.tab_action)
+        self.assertEqual('User', uut.hdr_user)
+        self.assertEqual('Email', uut.hdr_email)
+        self.assertEqual('ID', uut.hdr_id)
+        self.assertEqual('Due Date', uut.hdr_due)
+        self.assertEqual('Status', uut.hdr_status)
+
+        self.assertEqual('smtp.office365.com', uut.mail_server)
+        self.assertEqual('587', uut.mail_port)
+        self.assertEqual(None, uut.mail_password)
+        self.assertEqual('slate@slaterockandgravel.com', uut.mail_from)
+        self.assertEqual('Do It! Now!!!', uut.mail_subject)
+        self.assertEqual(None, uut.mail_cc)
+
+        self.assertIn('The following actions assigned to you', uut.msg_preamble)
+        self.assertEqual('<p/><p>Thank you,</p><p>Mr. Slate<br/>Slate Rock and Gravel</p>', uut.msg_close)
+        self.assertEqual(['ID', 'Action', 'User', 'Due Date', 'Notes'], uut.msg_table_headers)
+        self.assertEqual({'Action': 'l', 'Notes': 'l'}, uut.msg_table_align)

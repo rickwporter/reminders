@@ -161,7 +161,7 @@ class Reminders:
         self.mail_password = config.get(CSECT_EMAIL, 'password') or self.mail_password
         self.mail_from = config.get(CSECT_EMAIL, 'from') or self.mail_from
         self.mail_subject = config.get(CSECT_EMAIL, 'subject') or self.mail_subject
-        self.mail_cc = [_.strip() for _ in config.get(CSECT_EMAIL, 'cc').split(',')] or self.mail_cc
+        self.mail_cc = [_.strip() for _ in config.get(CSECT_EMAIL, 'cc').split(',') if _.strip()] or self.mail_cc
 
         self.msg_preamble = config.get(CSECT_MSG, 'preamble') or self.msg_preamble
         self.msg_close = config.get(CSECT_MSG, 'close') or self.msg_close
