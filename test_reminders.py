@@ -321,4 +321,4 @@ class TestReminders(unittest.TestCase):
         ]
         result = uut.run(args)
         self.assertEqual(0, result)
-        mock_print.assert_called_once_with('No open user actions found in example/bedrock.xlsx for Pebbles in the next 14 days')
+        mock_print.assert_called_once_with('No open user actions found in example/bedrock.xlsx for Pebbles in the next 14 days')  # noqa: E501
