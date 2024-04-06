@@ -77,7 +77,7 @@ class TestReminders(unittest.TestCase):
         self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'slate'))
         self.assertRaises(AmbiguousUser, lambda: uut.findUser(users, 'flintstone'))
 
-    def test_reminders_parse_config_example(self):
+    def test_reminders_config_example(self):
         uut = Reminders()
         uut.parse_config('example/config.ini')
         self.assertEqual('bedrock.xlsx', uut.spreadsheet)
@@ -100,3 +100,20 @@ class TestReminders(unittest.TestCase):
         self.assertEqual('<p/><p>Thank you,</p><p>Mr. Slate<br/>Slate Rock and Gravel</p>', uut.msg_close)
         self.assertEqual(['ID', 'Action', 'User', 'Due Date', 'Notes'], uut.msg_table_headers)
         self.assertEqual({'Action': 'l', 'Notes': 'l'}, uut.msg_table_align)
+
+        self.assertEqual([], uut.check_config())
+
+    def test_reminders_config_empty(self):
+        uut = Reminders()
+        errors = uut.check_config()
+        self.assertIn('Missing spreadsheet tab name for actions', errors)
+        self.assertIn('Missing spreadsheet tab name for users', errors)
+        self.assertIn('Missing user/action user-id field', errors)
+        self.assertIn('Missing user email field', errors)
+        self.assertIn('Missing action identifier field', errors)
+        self.assertIn('Missing action due date field', errors)
+        self.assertIn('Missing action status field', errors)
+        self.assertIn('Missing mail server or port', errors)
+        self.assertIn('Missing mail from address', errors)
+        self.assertIn('Missing mail subject', errors)
+        self.assertIn('Missing message table headers', errors)
