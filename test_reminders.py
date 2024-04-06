@@ -191,7 +191,6 @@ class TestReminders(unittest.TestCase):
         uut.parse_config('example/config.ini')  # correlation needs the fields initialized
         users = uut.sheet_to_dict('example/bedrock.xlsx', 'Users')
 
-        # happy path
         self.assertEqual([], uut.validate_users(users))
 
         users[0].update({uut.hdr_email: ''})
@@ -201,12 +200,22 @@ class TestReminders(unittest.TestCase):
         self.assertIn('Fred Flintstone (Users:1) error(s): missing email', errors)
         self.assertIn('Betty Rubble (Users:4) error(s): missing email', errors)
 
+        # change template to catch everyone
+        uut.msg_preamble = '{Foo}'
+        uut.msg_close = '{Bar}'
+
+        errors = uut.validate_users(users)
+        self.assertEqual(4, len(errors))
+        self.assertIn('Fred Flintstone (Users:1) error(s): missing email, missing email fields Bar/Foo', errors)
+        self.assertIn('Wilma Flintstone (Users:2) error(s): missing email fields Bar/Foo', errors)
+        self.assertIn('Barney Rubble (Users:3) error(s): missing email fields Bar/Foo', errors)
+        self.assertIn('Betty Rubble (Users:4) error(s): missing email, missing email fields Bar/Foo', errors)
+
     def test_reminders_validate_actions(self):
         uut = Reminders()
         uut.parse_config('example/config.ini')  # correlation needs the fields initialized
         actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
 
-        # happy path
         self.assertEqual([], uut.validate_actions(actions))
 
         actions[0].update({uut.hdr_user: ''})
@@ -216,6 +225,15 @@ class TestReminders(unittest.TestCase):
         self.assertEqual(2, len(errors))
         self.assertIn('SG1 (Actions:1) error(s): missing assignment', errors)
         self.assertIn('Rubble1 (Actions:4) error(s): missing assignment, missing due date', errors)
+
+        # change template to catch all actions
+        uut.msg_table_headers = ['Sna', 'Foo']
+        errors = uut.validate_actions(actions)
+        self.assertEqual(4, len(errors))
+        self.assertIn('SG1 (Actions:1) error(s): missing assignment, missing table fields Foo/Sna', errors)
+        self.assertIn('SG2 (Actions:2) error(s): missing table fields Foo/Sna', errors)
+        self.assertIn('FS1 (Actions:3) error(s): missing table fields Foo/Sna', errors)
+        self.assertIn('Rubble1 (Actions:4) error(s): missing assignment, missing due date, missing table fields Foo/Sna', errors)  # noqa: E501
 
     @patch('reminders.Reminders.print')
     @patch('smtplib.SMTP.sendmail')

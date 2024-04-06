@@ -17,6 +17,7 @@ from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import Tuple
 
 
@@ -437,21 +438,36 @@ class Reminders:
             server.quit()
         return
 
+    def get_fields(self, string: str) -> Set[str]:
+        return set([_.replace('{', '').replace('}', '') for _ in FIELD_RE.findall(string)])
+
     def validate_users(self, users: List[Dict]) -> List[str]:
         """
         Verifies all users have all "required" fields
         """
+        fields = self.get_fields(self.msg_preamble) | self.get_fields(self.msg_close)
+        fields.discard('days')  # not part of user record
+        fields.discard(self.hdr_email)  # already check for missing email
+
         errors = []
         for user in users:
             reasons = []
             if not user.get(self.hdr_email):
                 reasons.append('missing email')
+            missing = fields - user.keys()
+            if missing:
+                reasons.append(f"missing email fields {'/'.join(sorted(missing))}")
             if reasons:
                 errors.append(f"{user.get(self.hdr_user)} ({user.get(ROW_HEADER)}) error(s): {', '.join(reasons)}")
 
         return errors
 
     def validate_actions(self, actions: List[Dict]) -> List[str]:
+        fields = set(self.msg_table_headers)
+        # remove the important fields we already check for (to avoid redundant errors)
+        fields.discard(self.hdr_user)
+        fields.discard(self.hdr_due)
+
         errors = []
         for action in actions:
             reasons = []
@@ -459,6 +475,9 @@ class Reminders:
                 reasons.append('missing assignment')
             if not action.get(self.hdr_due):
                 reasons.append('missing due date')
+            missing = fields - action.keys()
+            if missing:
+                reasons.append(f"missing table fields {'/'.join(sorted(missing))}")
             if reasons:
                 errors.append(f"{action.get(self.hdr_id)} ({action.get(ROW_HEADER)}) error(s): {', '.join(reasons)}")
 
