@@ -144,6 +144,12 @@ class Reminders:
         )
         return parser.parse_args(*args)
 
+    def print(self, *args, **kwargs) -> None:
+        """
+        This is used for easier mocking/capture in unittests
+        """
+        print(*args, **kwargs)
+
     def parse_config(self, filename: str) -> None:
         config = SafeConfigParser()
         config.read(filename)
@@ -379,9 +385,9 @@ class Reminders:
         """
         Send emails to all the users in the list with actions.
         """
-        print(f"Sending emails about items due in the next {days} days:")
+        self.print(f"Sending emails about items due in the next {days} days:")
         for (user, actions) in user_actions:
-            print(f"    {user.get(self.hdr_user)}: {len(actions)}")
+            self.print(f"    {user.get(self.hdr_user)}: {len(actions)}")
 
         # each user gets a tailored email
         server = self.get_email_server()
@@ -396,18 +402,18 @@ class Reminders:
         """
         Provides menu for what to do with a particular user/actions.
         """
-        print(f"{user.get(self.hdr_user)}: {len(actions)}")
+        self.print(f"{user.get(self.hdr_user)}: {len(actions)}")
         what = None
         while what not in (What.SKIP, What.EMAIL, What.EXIT):
-            print(f"What should be done with {user.get(self.hdr_user)}'s action?")
+            self.print(f"What should be done with {user.get(self.hdr_user)}'s action?")
             if not what:
-                print(f"  {What.SKIP} - skip sending email to this user")
-                print(f"  {What.EMAIL} - send email to {user.get(self.hdr_email)}")
-                print(f"  {What.SHOW} - show the actions (another choice allowed)")
-                print(f"  {What.EXIT} - do NOT send anymore emails to anyone")
+                self.print(f"  {What.SKIP} - skip sending email to this user")
+                self.print(f"  {What.EMAIL} - send email to {user.get(self.hdr_email)}")
+                self.print(f"  {What.SHOW} - show the actions (another choice allowed)")
+                self.print(f"  {What.EXIT} - do NOT send anymore emails to anyone")
             what = input(f"Choose {What.SKIP}, {What.EMAIL}, {What.SHOW}, or {What.EXIT}: ").lower()
             if what == What.SHOW:
-                print(f"{self._create_table(actions, Format.TEXT)}")
+                self.print(f"{self._create_table(actions, Format.TEXT)}")
         return what
 
     def interactive_send_email(self, user_actions: List[Tuple[Dict, List[Dict]]], days: int) -> None:
@@ -425,7 +431,7 @@ class Reminders:
                 server = server or self.get_email_server()
                 self.send_email_via_server(server, user, actions, days)
 
-        print('No more users')
+        self.print('No more users')
 
         if server:
             server.quit()
@@ -443,19 +449,19 @@ class Reminders:
 
         errors = self.check_config()
         if errors:
-            print(f"Configuration errors:{NL}{NL.join(errors)}")
+            self.print(f"Configuration errors:{NL}{NL.join(errors)}")
             return 5
 
         spreadsheet = Path(args.spreadsheet or self.spreadsheet)
         if not spreadsheet.is_file():
-            print(f"{spreadsheet} is not a file!")
+            self.print(f"{spreadsheet} is not a file!")
             return 1
 
         users = self.sheet_to_dict(str(spreadsheet), self.tab_user)
         missing_email = [_ for _ in users if not _.get(self.hdr_email)]
         if missing_email:
             messages = [f"{_.get(self.hdr_user)}, row {_.get(ROW_HEADER)}" for _ in missing_email]
-            print(f"Missing emails for: {NL}{NL.join(messages)}")
+            self.print(f"Missing emails for: {NL}{NL.join(messages)}")
             return 2
 
         actions = self.sheet_to_dict(str(spreadsheet), self.tab_action)
@@ -464,14 +470,14 @@ class Reminders:
         unassigned = [_ for _ in actions if not _.get(self.hdr_user)]
         if unassigned:
             messages = [f"{_.get(self.hdr_id)}, row {_.get(ROW_HEADER)}" for _ in unassigned]
-            print(f"Missing assignments for: {NL}{NL.join(messages)}")
+            self.print(f"Missing assignments for: {NL}{NL.join(messages)}")
             return 3
 
         # check for missing due dates
         missing_due = [_ for _ in actions if not _.get(self.hdr_due)]
         if missing_due:
             messages = [f"{_.get(self.hdr_id)}, row {_.get(ROW_HEADER)}" for _ in missing_due]
-            print(f"Missing due date for: {NL}{NL.join(messages)}")
+            self.print(f"Missing due date for: {NL}{NL.join(messages)}")
             return 4
 
         # start by filtering out non-Open items... may contain users no longer in the system
@@ -494,7 +500,7 @@ class Reminders:
         # check after filtering
         if not user_actions:
             filter_info = f" for {args.person}" if args.person else ""
-            print(
+            self.print(
                 f"No open user actions found in {str(spreadsheet)}"
                 f"{filter_info} in the next {days} days"
             )
