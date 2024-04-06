@@ -186,6 +186,37 @@ class TestReminders(unittest.TestCase):
         expected = self.read_text('resources/all_actions.csv').replace('\n', '\r\n')
         self.assertEqual(expected, uut._create_table(actions, Format.CSV))
 
+    def test_reminders_validate_users(self):
+        uut = Reminders()
+        uut.parse_config('example/config.ini')  # correlation needs the fields initialized
+        users = uut.sheet_to_dict('example/bedrock.xlsx', 'Users')
+
+        # happy path
+        self.assertEqual([], uut.validate_users(users))
+
+        users[0].update({uut.hdr_email: ''})
+        users[3].pop(uut.hdr_email, None)
+        errors = uut.validate_users(users)
+        self.assertEqual(2, len(errors))
+        self.assertIn('Fred Flintstone (Users:1) error(s): missing email', errors)
+        self.assertIn('Betty Rubble (Users:4) error(s): missing email', errors)
+
+    def test_reminders_validate_actions(self):
+        uut = Reminders()
+        uut.parse_config('example/config.ini')  # correlation needs the fields initialized
+        actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
+
+        # happy path
+        self.assertEqual([], uut.validate_actions(actions))
+
+        actions[0].update({uut.hdr_user: ''})
+        actions[3].pop(uut.hdr_user, None)
+        actions[3].update({uut.hdr_due: None})
+        errors = uut.validate_actions(actions)
+        self.assertEqual(2, len(errors))
+        self.assertIn('SG1 (Actions:1) error(s): missing assignment', errors)
+        self.assertIn('Rubble1 (Actions:4) error(s): missing assignment, missing due date', errors)
+
     @patch('reminders.Reminders.print')
     @patch('smtplib.SMTP.sendmail')
     @patch('smtplib.SMTP.login')
