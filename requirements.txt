@@ -3,3 +3,6 @@
 configfile (~=1.2.4)
 pandas (~=2.2.1)
 prettytable (~=3.10.0)
+
+# Not needed for runtime, but needed for measuring
+coverage(~= 7.4.4)
