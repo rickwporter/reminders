@@ -190,7 +190,7 @@ class TestReminders(unittest.TestCase):
     @patch('smtplib.SMTP.sendmail')
     @patch('smtplib.SMTP.login')
     @patch('smtplib.SMTP.starttls')
-    def test_reminders_email(self, mock_starttls, mock_login, mock_send, mock_print):
+    def test_reminders_run_example(self, mock_starttls, mock_login, mock_send, mock_print):
         uut = Reminders()
         uut.mail_password = 'abc123'  # avoid prompting
 
@@ -215,3 +215,79 @@ class TestReminders(unittest.TestCase):
             call('    Fred Flintstone: 1'),
         ]
         self.assertEqual(print_calls, mock_print.call_args_list)
+
+    @patch('reminders.Reminders.print')
+    def test_reminders_run_no_config(self, mock_print):
+        uut = Reminders()
+        uut.mail_password = 'abc123'  # avoid prompting
+
+        args = [
+            '-s',
+            'example/bedrock.xlsx',
+        ]
+        result = uut.run(args)
+        self.assertEqual(5, result)
+        mock_print.assert_called_once_with('Configuration errors:\n\tMissing spreadsheet tab name for actions\n\tMissing spreadsheet tab name for users\n\tMissing user/action user-id field\n\tMissing user email field\n\tMissing action identifier field\n\tMissing action due date field\n\tMissing action status field\n\tMissing mail server or port\n\tMissing mail from address\n\tMissing mail subject\n\tMissing message table headers')  # noqa: E501
+
+    @patch('reminders.Reminders.print')
+    def test_reminders_run_no_spreadsheet(self, mock_print):
+        uut = Reminders()
+        uut.mail_password = 'abc123'  # avoid prompting
+
+        args = [
+            '-c',
+            'example/config.ini',
+        ]
+        result = uut.run(args)
+        self.assertEqual(1, result)
+        mock_print.assert_called_once_with('bedrock.xlsx is not a file!')
+
+    @patch('reminders.Reminders.print')
+    @patch('smtplib.SMTP.sendmail')
+    @patch('smtplib.SMTP.login')
+    @patch('smtplib.SMTP.starttls')
+    def test_reminders_run_person_filter(self, mock_starttls, mock_login, mock_send, mock_print):
+        uut = Reminders()
+        uut.mail_password = 'abc123'  # avoid prompting
+
+        args = [
+            '-c',
+            'example/config.ini',
+            # NOTE: must specify filename, since config.ini assumes it is in same directory as config.ini
+            '-s',
+            'example/bedrock.xlsx',
+            '-p',
+            'fred',
+            '-d',
+            '30',
+        ]
+        result = uut.run(args)
+        self.assertEqual(0, result)
+        self.assertEqual(1, mock_starttls.call_count)
+        self.assertEqual(1, mock_login.call_count)
+        mock_login.assert_called_once_with(uut.mail_from, uut.mail_password)
+        self.assertEqual(1, mock_send.call_count)
+        self.assertEqual(2, mock_print.call_count)
+        print_calls = [
+            call('Sending emails about items due in the next 30 days:'),
+            call('    Fred Flintstone: 1'),
+        ]
+        self.assertEqual(print_calls, mock_print.call_args_list)
+
+    @patch('reminders.Reminders.print')
+    def test_reminders_run_missing_person_filter(self, mock_print):
+        uut = Reminders()
+        uut.mail_password = 'abc123'  # avoid prompting
+
+        args = [
+            '-c',
+            'example/config.ini',
+            # NOTE: must specify filename, since config.ini assumes it is in same directory as config.ini
+            '-s',
+            'example/bedrock.xlsx',
+            '-p',
+            'Pebbles',
+        ]
+        result = uut.run(args)
+        self.assertEqual(0, result)
+        mock_print.assert_called_once_with('No open user actions found in example/bedrock.xlsx for Pebbles in the next 14 days')
