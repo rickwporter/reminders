@@ -3,6 +3,8 @@ import unittest
 from typing import Dict
 from typing import List
 from typing import Tuple
+from unittest.mock import call
+from unittest.mock import patch
 
 from datetime import datetime
 from reminders import AmbiguousUser
@@ -183,3 +185,33 @@ class TestReminders(unittest.TestCase):
         self.assertEqual(expected, uut._create_table(actions, Format.JSON))
         expected = self.read_text('resources/all_actions.csv').replace('\n', '\r\n')
         self.assertEqual(expected, uut._create_table(actions, Format.CSV))
+
+    @patch('reminders.Reminders.print')
+    @patch('smtplib.SMTP.sendmail')
+    @patch('smtplib.SMTP.login')
+    @patch('smtplib.SMTP.starttls')
+    def test_reminders_email(self, mock_starttls, mock_login, mock_send, mock_print):
+        uut = Reminders()
+        uut.mail_password = 'abc123'  # avoid prompting
+
+        args = [
+            '-c',
+            'example/config.ini',
+            # NOTE: must specify filename, since config.ini assumes it is in same directory as config.ini
+            '-s',
+            'example/bedrock.xlsx',
+        ]
+        result = uut.run(args)
+        self.assertEqual(0, result)
+        self.assertEqual(1, mock_starttls.call_count)
+        self.assertEqual(1, mock_login.call_count)
+        mock_login.assert_called_once_with(uut.mail_from, uut.mail_password)
+        self.assertEqual(3, mock_send.call_count)
+        self.assertEqual(4, mock_print.call_count)
+        print_calls = [
+            call('Sending emails about items due in the next 14 days:'),
+            call('    Barney Rubble: 2'),
+            call('    Betty Rubble: 1'),
+            call('    Fred Flintstone: 1'),
+        ]
+        self.assertEqual(print_calls, mock_print.call_args_list)
