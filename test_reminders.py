@@ -6,6 +6,7 @@ from typing import Tuple
 
 from datetime import datetime
 from reminders import AmbiguousUser
+from reminders import MissingUser
 from reminders import Reminders
 from reminders import ROW_HEADER
 
@@ -159,3 +160,7 @@ class TestReminders(unittest.TestCase):
             set(['Actions:3']),
             set([_.get(ROW_HEADER) for _ in items])
         )
+
+        # modify a user action to get a MissingUser exception
+        actions[2].update({'User': 'Bam Bam'})
+        self.assertRaises(MissingUser, lambda: uut.correlate(users, actions))
