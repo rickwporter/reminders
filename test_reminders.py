@@ -8,10 +8,13 @@ from unittest.mock import patch
 
 from datetime import datetime
 from reminders import AmbiguousUser
+from reminders import CSECT_EMAIL
+from reminders import CSECT_MSG
 from reminders import Format
 from reminders import MissingUser
 from reminders import Reminders
 from reminders import ROW_HEADER
+from reminders import SafeConfigParser
 
 
 class TestReminders(unittest.TestCase):
@@ -125,6 +128,84 @@ class TestReminders(unittest.TestCase):
         self.assertIn('Missing mail from address', errors)
         self.assertIn('Missing mail subject', errors)
         self.assertIn('Missing message table headers', errors)
+
+    def test_reminders_config_cc(self):
+        uut = Reminders()
+
+        # start with a baseline config
+        config = SafeConfigParser()
+        config.read('example/config.ini')
+
+        config.remove_option(CSECT_EMAIL, 'cc')
+        uut.update_config(config)
+        self.assertEqual(None, uut.mail_cc)
+
+        config.set(CSECT_EMAIL, 'cc', '')
+        uut.update_config(config)
+        self.assertEqual(None, uut.mail_cc)
+
+        config.set(CSECT_EMAIL, 'cc', ',   ,    ,')
+        uut.update_config(config)
+        self.assertEqual(None, uut.mail_cc)
+
+        mail1 = "fred@flintstone.com"
+        mail2 = "barney@rubble.com"
+        config.set(CSECT_EMAIL, 'cc', f"{mail1},   ,  {mail2}  ,")
+        uut.update_config(config)
+        self.assertEqual([mail1, mail2], uut.mail_cc)
+
+    def test_reminders_config_table_headers(self):
+        uut = Reminders()
+
+        # start with a baseline config
+        config = SafeConfigParser()
+        config.read('example/config.ini')
+
+        config.remove_option(CSECT_MSG, 'columns')
+        uut.update_config(config)
+        self.assertEqual(None, uut.msg_table_headers)
+
+        config.set(CSECT_MSG, 'columns', '')
+        uut.update_config(config)
+        self.assertEqual(None, uut.msg_table_headers)
+
+        config.set(CSECT_MSG, 'columns', ',   ,    ,')
+        uut.update_config(config)
+        self.assertEqual(None, uut.msg_table_headers)
+
+        hdr1 = "User"
+        hdr2 = "Due Date"
+        config.set(CSECT_MSG, 'columns', f"  , {hdr1},   ,  {hdr2}  ,")
+        uut.update_config(config)
+        self.assertEqual([hdr1, hdr2], uut.msg_table_headers)
+
+    def test_reminders_config_table_align(self):
+        uut = Reminders()
+
+        # start with a baseline config
+        config = SafeConfigParser()
+        config.read('example/config.ini')
+
+        config.remove_option(CSECT_MSG, 'align')
+        uut.update_config(config)
+        self.assertEqual(None, uut.msg_table_align)
+
+        config.set(CSECT_MSG, 'align', '')
+        uut.update_config(config)
+        self.assertEqual(None, uut.msg_table_align)
+
+        config.set(CSECT_MSG, 'align', ',   ,    ,')
+        uut.update_config(config)
+        self.assertEqual(None, uut.msg_table_align)
+
+        hdr1 = "User"
+        hdr2 = "Due Date"
+        config.set(CSECT_MSG, 'align', f"  , {hdr1},   ,  {hdr2}: l  ,")
+        self.assertRaises(ValueError, lambda: uut.update_config(config))
+
+        config.set(CSECT_MSG, 'align', f"  , {hdr1}: r,   ,  {hdr2}: l  ,")
+        uut.update_config(config)
+        self.assertEqual({hdr1: 'r', hdr2: 'l'}, uut.msg_table_align)
 
     def findActions(self, correlated: List[Tuple], firstname: str) -> List[Dict]:
         for (user, userActions) in correlated:

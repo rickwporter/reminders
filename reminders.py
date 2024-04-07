@@ -154,6 +154,9 @@ class Reminders:
     def parse_config(self, filename: str) -> None:
         config = SafeConfigParser()
         config.read(filename)
+        self.update_config(config)
+
+    def update_config(self, config: SafeConfigParser) -> None:
         self.spreadsheet = config.get(CSECT_SOURCE, 'spreadsheet') or self.spreadsheet
         self.tab_user = config.get(CSECT_SOURCE, 'tab_users') or self.tab_user
         self.tab_action = config.get(CSECT_SOURCE, 'tab_actions') or self.tab_action
@@ -173,14 +176,18 @@ class Reminders:
         self.msg_preamble = config.get(CSECT_MSG, 'preamble') or self.msg_preamble
         self.msg_close = config.get(CSECT_MSG, 'close') or self.msg_close
         self.msg_table_headers = [
-            _.strip() for _ in config.get(CSECT_MSG, 'columns').split(',')
+            _.strip() for _ in config.get(CSECT_MSG, 'columns').split(',') if _.strip()
         ] or self.msg_table_headers
-        avalues = [_.strip() for _ in config.get(CSECT_MSG, 'align').split(',')]
+        avalues = [_.strip() for _ in config.get(CSECT_MSG, 'align').split(',') if _.strip()]
         if avalues:
             self.msg_table_align = {}
             for a in avalues:
-                name, align = a.split(':')
-                self.msg_table_align.update({name.strip(): align.strip()})
+                parts = [_.strip() for _ in a.split(':') if _.strip()]
+                if len(parts) != 2:
+                    raise ValueError(f"The {CSECT_MSG}/align option must be of the form 'header: align-value'")
+                name = parts[0]
+                align = parts[1]
+                self.msg_table_align.update({name: align})
         return
 
     def check_config(self) -> List[str]:
