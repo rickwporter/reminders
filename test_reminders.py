@@ -372,6 +372,18 @@ class TestReminders(unittest.TestCase):
         self.assertEqual(1, result)
         mock_print.assert_called_once_with('bedrock.xlsx is not a file!')
 
+    def test_reminders_run_print(self):
+        # let's output get printed
+        uut = Reminders()
+        uut.mail_password = 'abc123'  # avoid prompting
+
+        args = [
+            '-c',
+            'example/config.ini',
+        ]
+        result = uut.run(args)
+        self.assertEqual(1, result)
+
     @patch('reminders.Reminders.print')
     @patch('smtplib.SMTP.sendmail')
     @patch('smtplib.SMTP.login')
@@ -421,3 +433,51 @@ class TestReminders(unittest.TestCase):
         result = uut.run(args)
         self.assertEqual(0, result)
         mock_print.assert_called_once_with('No open user actions found in example/bedrock.xlsx for Pebbles in the next 14 days')  # noqa: E501
+
+    @patch('reminders.Reminders.print')
+    def test_reminders_run_missing_config(self, mock_print):
+        uut = Reminders()
+
+        args = [
+            '-c',
+            'resources/missing_config.ini',
+            '-s',
+            'example/bedrock.xlsx',
+        ]
+        result = uut.run(args)
+        self.assertEqual(4, result)
+        mock_print.assert_called_once_with('resources/missing_config.ini is not a file')
+
+    @patch('reminders.Reminders.print')
+    def test_reminders_run_missing_bad_users(self, mock_print):
+        uut = Reminders()
+
+        args = [
+            '-c',
+            'resources/bad_users.ini',
+            '-s',
+            'example/bedrock.xlsx',
+        ]
+        result = uut.run(args)
+        self.assertEqual(2, result)
+        self.assertEqual(1, mock_print.call_count)
+        # this is a bit hacky, but don't want to print EVERYTHING...
+        message = mock_print.call_args.args[0]
+        self.assertTrue(message.startswith('Invalid users:'))
+
+    @patch('reminders.Reminders.print')
+    def test_reminders_run_missing_bad_actions(self, mock_print):
+        uut = Reminders()
+
+        args = [
+            '-c',
+            'resources/bad_actions.ini',
+            '-s',
+            'example/bedrock.xlsx',
+        ]
+        result = uut.run(args)
+        self.assertEqual(3, result)
+        self.assertEqual(1, mock_print.call_count)
+        # this is a bit hacky, but don't want to print EVERYTHING...
+        message = mock_print.call_args.args[0]
+        self.assertTrue(message.startswith('Invalid actions:'))

@@ -498,6 +498,10 @@ class Reminders:
         days = args.days
 
         if args.config:
+            config = Path(args.config)
+            if not config.is_file():
+                self.print(f"{args.config} is not a file")
+                return 4
             self.parse_config(args.config)
 
         errors = self.check_config()
