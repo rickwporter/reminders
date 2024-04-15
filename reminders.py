@@ -448,6 +448,16 @@ class Reminders:
     def get_fields(self, string: str) -> Set[str]:
         return set([_.replace('{', '').replace('}', '') for _ in FIELD_RE.findall(string)])
 
+    def valid_string(self, value: Any) -> bool:
+        if isinstance(value, str):
+            return bool(value)
+        return False
+
+    def valid_date(self, value: Any) -> bool:
+        if isinstance(value, datetime.date):
+            return True
+        return False
+        
     def validate_users(self, users: List[Dict]) -> List[str]:
         """
         Verifies all users have all "required" fields
@@ -459,7 +469,7 @@ class Reminders:
         errors = []
         for user in users:
             reasons = []
-            if not user.get(self.hdr_email):
+            if not self.valid_string(user.get(self.hdr_email)):
                 reasons.append('missing email')
             missing = fields - user.keys()
             if missing:
@@ -478,9 +488,9 @@ class Reminders:
         errors = []
         for action in actions:
             reasons = []
-            if not action.get(self.hdr_user):
+            if not self.valid_string(action.get(self.hdr_user)):
                 reasons.append('missing assignment')
-            if not action.get(self.hdr_due):
+            if not self.valid_date(action.get(self.hdr_due)):
                 reasons.append('missing due date')
             missing = fields - action.keys()
             if missing:
