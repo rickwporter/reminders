@@ -450,7 +450,7 @@ class Reminders:
 
     def valid_string(self, value: Any) -> bool:
         if isinstance(value, str):
-            return bool(value)
+            return bool(value.strip())
         return False
 
     def valid_date(self, value: Any) -> bool:
