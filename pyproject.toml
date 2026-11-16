@@ -1,0 +1,36 @@
+[project]
+name = "reminders"
+version = "0.1.0"
+description = "Send reminder emails from action items in an Excel spreadsheet"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9,<3.13"
+authors = [{ name = "Rick Porter" }]
+dependencies = [
+    "openpyxl>=3.1",
+    "pandas~=2.2.1",
+    "prettytable~=3.10.0",
+]
+
+[project.scripts]
+reminders = "reminders.reminders:main"
+
+[dependency-groups]
+dev = [
+    "coverage~=7.4.4",
+    "ruff",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+# Flake8 defaults: pycodestyle, pyflakes, and mccabe.
+select = ["E", "F", "W", "C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25

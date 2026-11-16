@@ -4,10 +4,19 @@ Welcome to the 'reminders' project. This started as a tool to help automate send
 
 ## Installation
 
-The program uses some additional Python modules. So, you will need to install. Here's the suggested method for installing the modules:
+This project uses [uv](https://docs.astral.sh/uv/) for Python and dependencies. From the repository root:
+
 ```sh
-python3 -m pip install --user --upgrade -r requirements.txt
+uv sync
 ```
+
+That creates `.venv` and installs the runtime packages plus the dev tools used by the Makefile (`coverage`, `ruff`). Run the program through that environment:
+
+```sh
+uv run reminders --help
+```
+
+`make test`, `make lint`, and `make coverage` call `uv run`, so they use the same environment.
 
 ## Usage
 

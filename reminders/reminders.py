@@ -457,7 +457,7 @@ class Reminders:
         if isinstance(value, datetime.date):
             return True
         return False
-        
+
     def validate_users(self, users: List[Dict]) -> List[str]:
         """
         Verifies all users have all "required" fields
@@ -569,7 +569,11 @@ class Reminders:
         return 0
 
 
-if __name__ == "__main__":
+def main() -> None:
     reminders = Reminders()
     result = reminders.run(sys.argv[1:])
     sys.exit(result)
+
+
+if __name__ == "__main__":
+    main()
