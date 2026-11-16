@@ -1,4 +1,4 @@
-UV ?= uv
+UV_RUN ?= uv run
 
 # the first target is the default, so just run help
 default: help
@@ -9,7 +9,7 @@ clean: ## Removes build artifacts
 	rm -rf .coverage htmlcov/
 
 lint: ## Check code formatting
-	$(UV) run ruff check
+	$(UV_RUN) ruff check
 
 help: ## This message
 	@echo "===================="
@@ -20,10 +20,10 @@ help: ## This message
 ###########
 ##@ Test
 test: ## Runs the unit tests
-	$(UV) run python -m unittest discover -s tests -vv --locals
+	$(UV_RUN) python -m unittest discover -s tests -vv --locals
 
 coverage: ## Runs unit tests and measures coverage
-	$(UV) run coverage run --branch --source=reminders -m unittest discover -s tests -v
-	$(UV) run coverage report -m
-	$(UV) run coverage html
+	$(UV_RUN) coverage run --branch --source=reminders -m unittest discover -s tests -v
+	$(UV_RUN) coverage report -m
+	$(UV_RUN) coverage html
 
