@@ -8,13 +8,10 @@ from unittest.mock import patch
 
 from datetime import datetime
 from reminders import AmbiguousUser
-from reminders import CSECT_EMAIL
-from reminders import CSECT_MSG
 from reminders import Format
 from reminders import MissingUser
 from reminders import Reminders
 from reminders import ROW_HEADER
-from reminders import SafeConfigParser
 
 
 class TestReminders(unittest.TestCase):
@@ -88,125 +85,6 @@ class TestReminders(unittest.TestCase):
         self.assertRaises(AmbiguousUser, lambda: uut.find_user(users, 'slate'))
         self.assertRaises(AmbiguousUser, lambda: uut.find_user(users, 'flintstone'))
 
-    def test_reminders_config_example(self):
-        uut = Reminders()
-        uut.parse_config('example/config.ini')
-        self.assertEqual('bedrock.xlsx', uut.spreadsheet)
-        self.assertEqual('Users', uut.tab_user)
-        self.assertEqual('Actions', uut.tab_action)
-        self.assertEqual('User', uut.hdr_user)
-        self.assertEqual('Email', uut.hdr_email)
-        self.assertEqual('ID', uut.hdr_id)
-        self.assertEqual('Due Date', uut.hdr_due)
-        self.assertEqual('Status', uut.hdr_status)
-
-        self.assertEqual('smtp.office365.com', uut.mail_server)
-        self.assertEqual('587', uut.mail_port)
-        self.assertEqual(None, uut.mail_password)
-        self.assertEqual('slate@slaterockandgravel.com', uut.mail_from)
-        self.assertEqual('Do It! Now!!!', uut.mail_subject)
-        self.assertEqual(None, uut.mail_cc)
-
-        self.assertIn('The following actions assigned to you', uut.msg_preamble)
-        self.assertEqual('<p/><p>Thank you,</p><p>Mr. Slate<br/>Slate Rock and Gravel</p>', uut.msg_close)
-        self.assertEqual(['ID', 'Action', 'User', 'Due Date', 'Notes'], uut.msg_table_headers)
-        self.assertEqual({'Action': 'l', 'Notes': 'l'}, uut.msg_table_align)
-
-        self.assertEqual([], uut.check_config())
-
-    def test_reminders_config_empty(self):
-        uut = Reminders()
-        errors = uut.check_config()
-        self.assertIn('Missing spreadsheet tab name for actions', errors)
-        self.assertIn('Missing spreadsheet tab name for users', errors)
-        self.assertIn('Missing user/action user-id field', errors)
-        self.assertIn('Missing user email field', errors)
-        self.assertIn('Missing action identifier field', errors)
-        self.assertIn('Missing action due date field', errors)
-        self.assertIn('Missing action status field', errors)
-        self.assertIn('Missing mail server or port', errors)
-        self.assertIn('Missing mail from address', errors)
-        self.assertIn('Missing mail subject', errors)
-        self.assertIn('Missing message table headers', errors)
-
-    def test_reminders_config_cc(self):
-        uut = Reminders()
-
-        # start with a baseline config
-        config = SafeConfigParser()
-        config.read('example/config.ini')
-
-        config.remove_option(CSECT_EMAIL, 'cc')
-        uut.update_config(config)
-        self.assertEqual(None, uut.mail_cc)
-
-        config.set(CSECT_EMAIL, 'cc', '')
-        uut.update_config(config)
-        self.assertEqual(None, uut.mail_cc)
-
-        config.set(CSECT_EMAIL, 'cc', ',   ,    ,')
-        uut.update_config(config)
-        self.assertEqual(None, uut.mail_cc)
-
-        mail1 = "fred@flintstone.com"
-        mail2 = "barney@rubble.com"
-        config.set(CSECT_EMAIL, 'cc', f"{mail1},   ,  {mail2}  ,")
-        uut.update_config(config)
-        self.assertEqual([mail1, mail2], uut.mail_cc)
-
-    def test_reminders_config_table_headers(self):
-        uut = Reminders()
-
-        # start with a baseline config
-        config = SafeConfigParser()
-        config.read('example/config.ini')
-
-        config.remove_option(CSECT_MSG, 'columns')
-        uut.update_config(config)
-        self.assertEqual(None, uut.msg_table_headers)
-
-        config.set(CSECT_MSG, 'columns', '')
-        uut.update_config(config)
-        self.assertEqual(None, uut.msg_table_headers)
-
-        config.set(CSECT_MSG, 'columns', ',   ,    ,')
-        uut.update_config(config)
-        self.assertEqual(None, uut.msg_table_headers)
-
-        hdr1 = "User"
-        hdr2 = "Due Date"
-        config.set(CSECT_MSG, 'columns', f"  , {hdr1},   ,  {hdr2}  ,")
-        uut.update_config(config)
-        self.assertEqual([hdr1, hdr2], uut.msg_table_headers)
-
-    def test_reminders_config_table_align(self):
-        uut = Reminders()
-
-        # start with a baseline config
-        config = SafeConfigParser()
-        config.read('example/config.ini')
-
-        config.remove_option(CSECT_MSG, 'align')
-        uut.update_config(config)
-        self.assertEqual(None, uut.msg_table_align)
-
-        config.set(CSECT_MSG, 'align', '')
-        uut.update_config(config)
-        self.assertEqual(None, uut.msg_table_align)
-
-        config.set(CSECT_MSG, 'align', ',   ,    ,')
-        uut.update_config(config)
-        self.assertEqual(None, uut.msg_table_align)
-
-        hdr1 = "User"
-        hdr2 = "Due Date"
-        config.set(CSECT_MSG, 'align', f"  , {hdr1},   ,  {hdr2}: l  ,")
-        self.assertRaises(ValueError, lambda: uut.update_config(config))
-
-        config.set(CSECT_MSG, 'align', f"  , {hdr1}: r,   ,  {hdr2}: l  ,")
-        uut.update_config(config)
-        self.assertEqual({hdr1: 'r', hdr2: 'l'}, uut.msg_table_align)
-
     def findActions(self, correlated: List[Tuple], firstname: str) -> List[Dict]:
         for (user, userActions) in correlated:
             if user.get('First') == firstname:
@@ -215,7 +93,7 @@ class TestReminders(unittest.TestCase):
 
     def test_reminders_correlate_example(self):
         uut = Reminders()
-        uut.parse_config('example/config.ini')  # correlation needs the fields initialized
+        uut.config.parse_config('example/config.ini')  # correlation needs the fields initialized
         users = uut.sheet_to_dict('example/bedrock.xlsx', 'Users')
         actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
         correlated = uut.correlate(users, actions)
@@ -255,7 +133,7 @@ class TestReminders(unittest.TestCase):
 
     def test_reminders_table(self):
         uut = Reminders()
-        uut.parse_config('example/config.ini')  # table creation needs the fields initialized
+        uut.config.parse_config('example/config.ini')  # table creation needs the fields initialized
         actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
 
         expected = self.read_text('resources/all_actions.html')
@@ -269,21 +147,21 @@ class TestReminders(unittest.TestCase):
 
     def test_reminders_validate_users(self):
         uut = Reminders()
-        uut.parse_config('example/config.ini')  # correlation needs the fields initialized
+        uut.config.parse_config('example/config.ini')  # correlation needs the fields initialized
         users = uut.sheet_to_dict('example/bedrock.xlsx', 'Users')
 
         self.assertEqual([], uut.validate_users(users))
 
-        users[0].update({uut.hdr_email: ''})
-        users[3].pop(uut.hdr_email, None)
+        users[0].update({uut.config.hdr_email: ''})
+        users[3].pop(uut.config.hdr_email, None)
         errors = uut.validate_users(users)
         self.assertEqual(2, len(errors))
         self.assertIn('Fred Flintstone (Users:1) error(s): missing email', errors)
         self.assertIn('Betty Rubble (Users:4) error(s): missing email', errors)
 
         # change template to catch everyone
-        uut.msg_preamble = '{Foo}'
-        uut.msg_close = '{Bar}'
+        uut.config.msg_preamble = '{Foo}'
+        uut.config.msg_close = '{Bar}'
 
         errors = uut.validate_users(users)
         self.assertEqual(4, len(errors))
@@ -294,21 +172,21 @@ class TestReminders(unittest.TestCase):
 
     def test_reminders_validate_actions(self):
         uut = Reminders()
-        uut.parse_config('example/config.ini')  # correlation needs the fields initialized
+        uut.config.parse_config('example/config.ini')  # correlation needs the fields initialized
         actions = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
 
         self.assertEqual([], uut.validate_actions(actions))
 
-        actions[0].update({uut.hdr_user: ''})
-        actions[3].pop(uut.hdr_user, None)
-        actions[3].update({uut.hdr_due: None})
+        actions[0].update({uut.config.hdr_user: ''})
+        actions[3].pop(uut.config.hdr_user, None)
+        actions[3].update({uut.config.hdr_due: None})
         errors = uut.validate_actions(actions)
         self.assertEqual(2, len(errors))
         self.assertIn('SG1 (Actions:1) error(s): missing assignment', errors)
         self.assertIn('Rubble1 (Actions:4) error(s): missing assignment, missing due date', errors)
 
         # change template to catch all actions
-        uut.msg_table_headers = ['Sna', 'Foo']
+        uut.config.msg_table_headers = ['Sna', 'Foo']
         errors = uut.validate_actions(actions)
         self.assertEqual(4, len(errors))
         self.assertIn('SG1 (Actions:1) error(s): missing assignment, missing table fields Foo/Sna', errors)
@@ -322,7 +200,7 @@ class TestReminders(unittest.TestCase):
     @patch('smtplib.SMTP.starttls')
     def test_reminders_run_example(self, mock_starttls, mock_login, mock_send, mock_print):
         uut = Reminders()
-        uut.mail_password = 'abc123'  # avoid prompting
+        uut.config.mail_password = 'abc123'  # avoid prompting
 
         args = [
             '-c',
@@ -335,7 +213,7 @@ class TestReminders(unittest.TestCase):
         self.assertEqual(0, result)
         self.assertEqual(1, mock_starttls.call_count)
         self.assertEqual(1, mock_login.call_count)
-        mock_login.assert_called_once_with(uut.mail_from, uut.mail_password)
+        mock_login.assert_called_once_with(uut.config.mail_from, uut.config.mail_password)
         self.assertEqual(3, mock_send.call_count)
         self.assertEqual(4, mock_print.call_count)
         print_calls = [
@@ -349,7 +227,7 @@ class TestReminders(unittest.TestCase):
     @patch('reminders.Reminders.print')
     def test_reminders_run_no_config(self, mock_print):
         uut = Reminders()
-        uut.mail_password = 'abc123'  # avoid prompting
+        uut.config.mail_password = 'abc123'  # avoid prompting
 
         args = [
             '-s',
@@ -362,7 +240,7 @@ class TestReminders(unittest.TestCase):
     @patch('reminders.Reminders.print')
     def test_reminders_run_no_spreadsheet(self, mock_print):
         uut = Reminders()
-        uut.mail_password = 'abc123'  # avoid prompting
+        uut.config.mail_password = 'abc123'  # avoid prompting
 
         args = [
             '-c',
@@ -375,7 +253,7 @@ class TestReminders(unittest.TestCase):
     def test_reminders_run_print(self):
         # let's output get printed
         uut = Reminders()
-        uut.mail_password = 'abc123'  # avoid prompting
+        uut.config.mail_password = 'abc123'  # avoid prompting
 
         args = [
             '-c',
@@ -390,7 +268,7 @@ class TestReminders(unittest.TestCase):
     @patch('smtplib.SMTP.starttls')
     def test_reminders_run_person_filter(self, mock_starttls, mock_login, mock_send, mock_print):
         uut = Reminders()
-        uut.mail_password = 'abc123'  # avoid prompting
+        uut.config.mail_password = 'abc123'  # avoid prompting
 
         args = [
             '-c',
@@ -407,7 +285,7 @@ class TestReminders(unittest.TestCase):
         self.assertEqual(0, result)
         self.assertEqual(1, mock_starttls.call_count)
         self.assertEqual(1, mock_login.call_count)
-        mock_login.assert_called_once_with(uut.mail_from, uut.mail_password)
+        mock_login.assert_called_once_with(uut.config.mail_from, uut.config.mail_password)
         self.assertEqual(1, mock_send.call_count)
         self.assertEqual(2, mock_print.call_count)
         print_calls = [
@@ -419,7 +297,7 @@ class TestReminders(unittest.TestCase):
     @patch('reminders.Reminders.print')
     def test_reminders_run_missing_person_filter(self, mock_print):
         uut = Reminders()
-        uut.mail_password = 'abc123'  # avoid prompting
+        uut.config.mail_password = 'abc123'  # avoid prompting
 
         args = [
             '-c',

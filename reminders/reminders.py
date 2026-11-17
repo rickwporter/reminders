@@ -5,7 +5,6 @@ import prettytable
 import re
 import sys
 
-from configparser import ConfigParser
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from enum import Enum
@@ -20,12 +19,10 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 
+from reminders.configuration import Configuration
+from reminders.exceptions import AmbiguousUser
+from reminders.exceptions import MissingUser
 
-###############################################################################
-###############################################################################
-CSECT_EMAIL = 'email'
-CSECT_MSG = 'message'
-CSECT_SOURCE = 'source'
 
 ROW_HEADER = '_row'
 
@@ -50,58 +47,13 @@ class What(str, Enum):
     EXIT = 'exit'
 
 
-class MissingUser(Exception):
-    """
-    Simple wrapper to format a missing user correctly.
-    """
-    def __init__(self, username: str, record: str, row: str):
-        message = f"Missing '{username}' on {record}, row={row}"
-        super().__init__(message)
-
-
-class AmbiguousUser(Exception):
-    """
-    Simple wrapper to format errors
-    """
-    def __init__(self, username: str, matches: List[str]):
-        message = f"Ambiguous result for '{username}' matches: {', '.join(matches)}"
-        super().__init__(message)
-
-
-class SafeConfigParser(ConfigParser):
-    """
-    Class with a get that does NOT throw when item does NOT exist
-    """
-    def get(self, section: str, option: str, raw: bool = True, **kwargs) -> str:
-        if not self.has_option(section, option):
-            return ''
-        return super().get(section, option, raw=raw, **kwargs)
-
-
 ###############################################################################
 # Function definitions
 #    These should not be modified
 ###############################################################################
 class Reminders:
     def __init__(self):
-        self.spreadsheet = None
-        self.tab_user = None
-        self.tab_action = None
-        self.hdr_user = None
-        self.hdr_email = None
-        self.hdr_id = None
-        self.hdr_due = None
-        self.hdr_status = None
-        self.mail_server = None
-        self.mail_port = None
-        self.mail_from = None
-        self.mail_password = None
-        self.mail_subject = None
-        self.mail_cc = None
-        self.msg_preamble = None
-        self.msg_table_headers = None
-        self.msg_table_align = None
-        self.msg_close = None
+        self.config = Configuration()
 
     def parse_args(self, *args) -> argparse.Namespace:
         """
@@ -150,77 +102,6 @@ class Reminders:
         This is used for easier mocking/capture in unittests
         """
         print(*args, **kwargs)
-
-    def parse_config(self, filename: str) -> None:
-        config = SafeConfigParser()
-        config.read(filename)
-        self.update_config(config)
-
-    def update_config(self, config: SafeConfigParser) -> None:
-        self.spreadsheet = config.get(CSECT_SOURCE, 'spreadsheet') or self.spreadsheet
-        self.tab_user = config.get(CSECT_SOURCE, 'tab_users') or self.tab_user
-        self.tab_action = config.get(CSECT_SOURCE, 'tab_actions') or self.tab_action
-        self.hdr_user = config.get(CSECT_SOURCE, 'user_id') or self.hdr_user
-        self.hdr_email = config.get(CSECT_SOURCE, 'email_addr') or self.hdr_email
-        self.hdr_id = config.get(CSECT_SOURCE, 'action_id') or self.hdr_id
-        self.hdr_due = config.get(CSECT_SOURCE, 'action_due') or self.hdr_due
-        self.hdr_status = config.get(CSECT_SOURCE, 'action_status') or self.hdr_status
-
-        self.mail_server = config.get(CSECT_EMAIL, 'server') or self.mail_server
-        self.mail_port = config.get(CSECT_EMAIL, 'port') or self.mail_port
-        self.mail_password = config.get(CSECT_EMAIL, 'password') or self.mail_password
-        self.mail_from = config.get(CSECT_EMAIL, 'from') or self.mail_from
-        self.mail_subject = config.get(CSECT_EMAIL, 'subject') or self.mail_subject
-        self.mail_cc = [_.strip() for _ in config.get(CSECT_EMAIL, 'cc').split(',') if _.strip()] or self.mail_cc
-
-        self.msg_preamble = config.get(CSECT_MSG, 'preamble') or self.msg_preamble
-        self.msg_close = config.get(CSECT_MSG, 'close') or self.msg_close
-        self.msg_table_headers = [
-            _.strip() for _ in config.get(CSECT_MSG, 'columns').split(',') if _.strip()
-        ] or self.msg_table_headers
-        avalues = [_.strip() for _ in config.get(CSECT_MSG, 'align').split(',') if _.strip()]
-        if avalues:
-            self.msg_table_align = {}
-            for a in avalues:
-                parts = [_.strip() for _ in a.split(':') if _.strip()]
-                if len(parts) != 2:
-                    raise ValueError(f"The {CSECT_MSG}/align option must be of the form 'header: align-value'")
-                name = parts[0]
-                align = parts[1]
-                self.msg_table_align.update({name: align})
-        return
-
-    def check_config(self) -> List[str]:
-        """
-        Insures all the "required" fields have been filled in.
-
-        Returns a list with any errors.
-        """
-        errors = []
-        if not self.tab_action:
-            errors += ["Missing spreadsheet tab name for actions"]
-        if not self.tab_user:
-            errors += ["Missing spreadsheet tab name for users"]
-        if not self.hdr_user:
-            errors += ["Missing user/action user-id field"]
-        if not self.hdr_email:
-            errors += ["Missing user email field"]
-        if not self.hdr_id:
-            errors += ["Missing action identifier field"]
-        if not self.hdr_due:
-            errors += ["Missing action due date field"]
-        if not self.hdr_status:
-            errors += ["Missing action status field"]
-        if not self.mail_server or not self.mail_port:
-            errors += ["Missing mail server or port"]
-        if not self.mail_from:
-            errors += ["Missing mail from address"]
-        if not self.mail_subject:
-            errors += ["Missing mail subject"]
-        if not self.msg_table_headers:
-            errors += ["Missing message table headers"]
-        # TODO: check that preamble and closing exist?
-        return errors
 
     def sheet_to_dict(self, filename: str, sheetname: str) -> List[Dict]:
         """
@@ -276,11 +157,11 @@ class Reminders:
         """
         uname_actions = {}
         for action in actions:
-            for username in action.get(self.hdr_user).split('/'):
+            for username in action.get(self.config.hdr_user).split('/'):
                 user = self.find_user(users, username)
                 if not user:
-                    raise MissingUser(username, action.get(self.hdr_id), action.get(ROW_HEADER))
-                uname = user.get(self.hdr_user)
+                    raise MissingUser(username, action.get(self.config.hdr_id), action.get(ROW_HEADER))
+                uname = user.get(self.config.hdr_user)
                 uact = uname_actions.get(uname, [])
                 uact.append(action)
                 uname_actions.update({uname: uact})
@@ -330,14 +211,14 @@ class Reminders:
         Creates a formatted table out of the list of actions.
         """
         table = prettytable.PrettyTable()
-        table.field_names = self.msg_table_headers
+        table.field_names = self.config.msg_table_headers
         # horizontal alignment can be overridden
-        for h, v in self.msg_table_align.items():
+        for h, v in self.config.msg_table_align.items():
             table.align[h] = v
 
         for item in actions:
             # remove the time, and turn the datetime value into a string
-            values = [self._format(item.get(h)) for h in self.msg_table_headers]
+            values = [self._format(item.get(h)) for h in self.config.msg_table_headers]
             table.add_row(values)
 
         if fmt == Format.HTML:
@@ -359,34 +240,34 @@ class Reminders:
         Simple "utility" to log into a mail server
         """
         # log into the email server once
-        password = self.mail_password or getpass(f"{self.mail_from} email password:")
-        server = SMTP(self.mail_server, self.mail_port)
+        password = self.config.mail_password or getpass(f"{self.config.mail_from} email password:")
+        server = SMTP(self.config.mail_server, self.config.mail_port)
         server.starttls()
-        server.login(self.mail_from, password)
+        server.login(self.config.mail_from, password)
         return server
 
     def send_email_via_server(self, server: SMTP, user: Dict, actions: List[Dict], days: int) -> None:
         """
         Formats the message to the user, and sends it using the server.
         """
-        to_user = user.get(self.hdr_email)
-        intro = self.substitute(self.msg_preamble, user, days)
-        closing = self.substitute(self.msg_close, user, days)
+        to_user = user.get(self.config.hdr_email)
+        intro = self.substitute(self.config.msg_preamble, user, days)
+        closing = self.substitute(self.config.msg_close, user, days)
         table = self._create_table(actions, Format.HTML)
         body = f"{intro}{table}{closing}"
         to = [to_user]
-        if isinstance(self.mail_cc, str):
-            to.append(self.mail_cc)
-        elif isinstance(self.mail_cc, list):
-            to.extend(self.mail_cc)
+        if isinstance(self.config.mail_cc, str):
+            to.append(self.config.mail_cc)
+        elif isinstance(self.config.mail_cc, list):
+            to.extend(self.config.mail_cc)
 
         message = MIMEMultipart("alternative")
-        message['Subject'] = self.mail_subject
-        message['From'] = self.mail_from
+        message['Subject'] = self.config.mail_subject
+        message['From'] = self.config.mail_from
         message['To'] = to_user
-        message['CC'] = self.mail_cc
+        message['CC'] = self.config.mail_cc
         message.attach(MIMEText(body, "html"))
-        server.sendmail(self.mail_from, to, message.as_string())
+        server.sendmail(self.config.mail_from, to, message.as_string())
         return
 
     def send_all_emails(self, user_actions: Dict, days: int) -> None:
@@ -395,7 +276,7 @@ class Reminders:
         """
         self.print(f"Sending emails about items due in the next {days} days:")
         for (user, actions) in user_actions:
-            self.print(f"    {user.get(self.hdr_user)}: {len(actions)}")
+            self.print(f"    {user.get(self.config.hdr_user)}: {len(actions)}")
 
         # each user gets a tailored email
         server = self.get_email_server()
@@ -410,13 +291,13 @@ class Reminders:
         """
         Provides menu for what to do with a particular user/actions.
         """
-        self.print(f"{user.get(self.hdr_user)}: {len(actions)}")
+        self.print(f"{user.get(self.config.hdr_user)}: {len(actions)}")
         what = None
         while what not in (What.SKIP, What.EMAIL, What.EXIT):
-            self.print(f"What should be done with {user.get(self.hdr_user)}'s action?")
+            self.print(f"What should be done with {user.get(self.config.hdr_user)}'s action?")
             if not what:
                 self.print(f"  {What.SKIP} - skip sending email to this user")
-                self.print(f"  {What.EMAIL} - send email to {user.get(self.hdr_email)}")
+                self.print(f"  {What.EMAIL} - send email to {user.get(self.config.hdr_email)}")
                 self.print(f"  {What.SHOW} - show the actions (another choice allowed)")
                 self.print(f"  {What.EXIT} - do NOT send anymore emails to anyone")
             what = input(f"Choose {What.SKIP}, {What.EMAIL}, {What.SHOW}, or {What.EXIT}: ").lower()
@@ -462,41 +343,45 @@ class Reminders:
         """
         Verifies all users have all "required" fields
         """
-        fields = self.get_fields(self.msg_preamble) | self.get_fields(self.msg_close)
+        fields = self.get_fields(self.config.msg_preamble) | self.get_fields(self.config.msg_close)
         fields.discard('days')  # not part of user record
-        fields.discard(self.hdr_email)  # already check for missing email
+        fields.discard(self.config.hdr_email)  # already check for missing email
 
         errors = []
         for user in users:
             reasons = []
-            if not self.valid_string(user.get(self.hdr_email)):
+            if not self.valid_string(user.get(self.config.hdr_email)):
                 reasons.append('missing email')
             missing = fields - user.keys()
             if missing:
                 reasons.append(f"missing email fields {'/'.join(sorted(missing))}")
             if reasons:
-                errors.append(f"{user.get(self.hdr_user)} ({user.get(ROW_HEADER)}) error(s): {', '.join(reasons)}")
+                errors.append(
+                    f"{user.get(self.config.hdr_user)} ({user.get(ROW_HEADER)}) error(s): {', '.join(reasons)}"
+                )
 
         return errors
 
     def validate_actions(self, actions: List[Dict]) -> List[str]:
-        fields = set(self.msg_table_headers)
+        fields = set(self.config.msg_table_headers)
         # remove the important fields we already check for (to avoid redundant errors)
-        fields.discard(self.hdr_user)
-        fields.discard(self.hdr_due)
+        fields.discard(self.config.hdr_user)
+        fields.discard(self.config.hdr_due)
 
         errors = []
         for action in actions:
             reasons = []
-            if not self.valid_string(action.get(self.hdr_user)):
+            if not self.valid_string(action.get(self.config.hdr_user)):
                 reasons.append('missing assignment')
-            if not self.valid_date(action.get(self.hdr_due)):
+            if not self.valid_date(action.get(self.config.hdr_due)):
                 reasons.append('missing due date')
             missing = fields - action.keys()
             if missing:
                 reasons.append(f"missing table fields {'/'.join(sorted(missing))}")
             if reasons:
-                errors.append(f"{action.get(self.hdr_id)} ({action.get(ROW_HEADER)}) error(s): {', '.join(reasons)}")
+                errors.append(
+                    f"{action.get(self.config.hdr_id)} ({action.get(ROW_HEADER)}) error(s): {', '.join(reasons)}"
+                )
 
         return errors
 
@@ -512,39 +397,39 @@ class Reminders:
             if not config.is_file():
                 self.print(f"{args.config} is not a file")
                 return 4
-            self.parse_config(args.config)
+            self.config.parse_config(args.config)
 
-        errors = self.check_config()
+        errors = self.config.check_config()
         if errors:
             self.print(f"Configuration errors:{NL}{NL.join(errors)}")
             return 5
 
-        spreadsheet = Path(args.spreadsheet or self.spreadsheet)
+        spreadsheet = Path(args.spreadsheet or self.config.spreadsheet)
         if not spreadsheet.is_file():
             self.print(f"{spreadsheet} is not a file!")
             return 1
 
-        users = self.sheet_to_dict(str(spreadsheet), self.tab_user)
+        users = self.sheet_to_dict(str(spreadsheet), self.config.tab_user)
         errors = self.validate_users(users)
         if errors:
             self.print(f"Invalid users: {NL}{NL.join(errors)}")
             return 2
 
-        actions = self.sheet_to_dict(str(spreadsheet), self.tab_action)
+        actions = self.sheet_to_dict(str(spreadsheet), self.config.tab_action)
         errors = self.validate_actions(actions)
         if errors:
             self.print(f"Invalid actions: {NL}{NL.join(errors)}")
             return 3
 
         # start by filtering out non-Open items... may contain users no longer in the system
-        actions = [_ for _ in actions if _.get(self.hdr_status) == 'Open']
+        actions = [_ for _ in actions if _.get(self.config.hdr_status) == 'Open']
 
         # remove actions not due, before correlating with by users
         before = datetime.datetime.now() + datetime.timedelta(days=days)
-        actions = [_ for _ in actions if _.get(self.hdr_due) < before]
+        actions = [_ for _ in actions if _.get(self.config.hdr_due) < before]
 
         # sort by time here, so it is displayed in order
-        actions = sorted(actions, key=lambda i: self._get_time(i[self.hdr_due]))
+        actions = sorted(actions, key=lambda i: self._get_time(i[self.config.hdr_due]))
 
         user_actions = self.correlate(users, actions)
 
