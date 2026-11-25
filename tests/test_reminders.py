@@ -1,9 +1,10 @@
 import unittest
 
+from contextlib import redirect_stdout
+from io import StringIO
 from typing import Dict
 from typing import List
 from typing import Tuple
-from unittest.mock import call
 from unittest.mock import patch
 
 from datetime import datetime
@@ -194,11 +195,16 @@ class TestReminders(unittest.TestCase):
         self.assertIn('FS1 (Actions:3) error(s): missing table fields Foo/Sna', errors)
         self.assertIn('Rubble1 (Actions:4) error(s): missing assignment, missing due date, missing table fields Foo/Sna', errors)  # noqa: E501
 
-    @patch('reminders.Reminders.print')
+    def run_and_capture(self, uut: Reminders, args: List[str]) -> Tuple[int, str]:
+        stdout = StringIO()
+        with redirect_stdout(stdout):
+            result = uut.run(args)
+        return result, stdout.getvalue().replace("\r\n", "\n")
+
     @patch('smtplib.SMTP.sendmail')
     @patch('smtplib.SMTP.login')
     @patch('smtplib.SMTP.starttls')
-    def test_reminders_run_example(self, mock_starttls, mock_login, mock_send, mock_print):
+    def test_reminders_run_example(self, mock_starttls, mock_login, mock_send):
         uut = Reminders()
         uut.config.mail_password = 'abc123'  # avoid prompting
 
@@ -209,23 +215,21 @@ class TestReminders(unittest.TestCase):
             '-s',
             'example/bedrock.xlsx',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(0, result)
         self.assertEqual(1, mock_starttls.call_count)
         self.assertEqual(1, mock_login.call_count)
         mock_login.assert_called_once_with(uut.config.mail_from, uut.config.mail_password)
         self.assertEqual(3, mock_send.call_count)
-        self.assertEqual(4, mock_print.call_count)
-        print_calls = [
-            call('Sending emails about items due in the next 14 days:'),
-            call('    Barney Rubble: 2'),
-            call('    Betty Rubble: 1'),
-            call('    Fred Flintstone: 1'),
-        ]
-        self.assertEqual(print_calls, mock_print.call_args_list)
+        expected = (
+            'Sending emails about items due in the next 14 days:\n'
+            '    Barney Rubble: 2\n'
+            '    Betty Rubble: 1\n'
+            '    Fred Flintstone: 1\n'
+        )
+        self.assertEqual(expected, output)
 
-    @patch('reminders.Reminders.print')
-    def test_reminders_run_no_config(self, mock_print):
+    def test_reminders_run_no_config(self):
         uut = Reminders()
         uut.config.mail_password = 'abc123'  # avoid prompting
 
@@ -233,12 +237,25 @@ class TestReminders(unittest.TestCase):
             '-s',
             'example/bedrock.xlsx',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(5, result)
-        mock_print.assert_called_once_with('Configuration errors:\n\tMissing spreadsheet tab name for actions\n\tMissing spreadsheet tab name for users\n\tMissing user/action user-id field\n\tMissing user email field\n\tMissing action identifier field\n\tMissing action due date field\n\tMissing action status field\n\tMissing mail server or port\n\tMissing mail from address\n\tMissing mail subject\n\tMissing message table headers')  # noqa: E501
+        expected = (
+            'Configuration errors:\n'
+            '\tMissing spreadsheet tab name for actions\n'
+            '\tMissing spreadsheet tab name for users\n'
+            '\tMissing user/action user-id field\n'
+            '\tMissing user email field\n'
+            '\tMissing action identifier field\n'
+            '\tMissing action due date field\n'
+            '\tMissing action status field\n'
+            '\tMissing mail server or port\n'
+            '\tMissing mail from address\n'
+            '\tMissing mail subject\n'
+            '\tMissing message table headers\n'
+        )
+        self.assertEqual(expected, output)
 
-    @patch('reminders.Reminders.print')
-    def test_reminders_run_no_spreadsheet(self, mock_print):
+    def test_reminders_run_no_spreadsheet(self):
         uut = Reminders()
         uut.config.mail_password = 'abc123'  # avoid prompting
 
@@ -246,12 +263,11 @@ class TestReminders(unittest.TestCase):
             '-c',
             'example/config.ini',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(1, result)
-        mock_print.assert_called_once_with('bedrock.xlsx is not a file!')
+        self.assertEqual('bedrock.xlsx is not a file!\n', output)
 
     def test_reminders_run_print(self):
-        # let's output get printed
         uut = Reminders()
         uut.config.mail_password = 'abc123'  # avoid prompting
 
@@ -259,14 +275,14 @@ class TestReminders(unittest.TestCase):
             '-c',
             'example/config.ini',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(1, result)
+        self.assertEqual('bedrock.xlsx is not a file!\n', output)
 
-    @patch('reminders.Reminders.print')
     @patch('smtplib.SMTP.sendmail')
     @patch('smtplib.SMTP.login')
     @patch('smtplib.SMTP.starttls')
-    def test_reminders_run_person_filter(self, mock_starttls, mock_login, mock_send, mock_print):
+    def test_reminders_run_person_filter(self, mock_starttls, mock_login, mock_send):
         uut = Reminders()
         uut.config.mail_password = 'abc123'  # avoid prompting
 
@@ -281,21 +297,19 @@ class TestReminders(unittest.TestCase):
             '-d',
             '30',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(0, result)
         self.assertEqual(1, mock_starttls.call_count)
         self.assertEqual(1, mock_login.call_count)
         mock_login.assert_called_once_with(uut.config.mail_from, uut.config.mail_password)
         self.assertEqual(1, mock_send.call_count)
-        self.assertEqual(2, mock_print.call_count)
-        print_calls = [
-            call('Sending emails about items due in the next 30 days:'),
-            call('    Fred Flintstone: 1'),
-        ]
-        self.assertEqual(print_calls, mock_print.call_args_list)
+        expected = (
+            'Sending emails about items due in the next 30 days:\n'
+            '    Fred Flintstone: 1\n'
+        )
+        self.assertEqual(expected, output)
 
-    @patch('reminders.Reminders.print')
-    def test_reminders_run_missing_person_filter(self, mock_print):
+    def test_reminders_run_missing_person_filter(self):
         uut = Reminders()
         uut.config.mail_password = 'abc123'  # avoid prompting
 
@@ -308,12 +322,13 @@ class TestReminders(unittest.TestCase):
             '-p',
             'Pebbles',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(0, result)
-        mock_print.assert_called_once_with('No open user actions found in example/bedrock.xlsx for Pebbles in the next 14 days')  # noqa: E501
+        # NOTE: file name changes for Windows, so test snippets
+        assert output.startswith("No open user actions found in")
+        assert "bedrock.xlsx for Pebbles in the next 14 days" in output
 
-    @patch('reminders.Reminders.print')
-    def test_reminders_run_missing_config(self, mock_print):
+    def test_reminders_run_missing_config(self):
         uut = Reminders()
 
         args = [
@@ -322,12 +337,11 @@ class TestReminders(unittest.TestCase):
             '-s',
             'example/bedrock.xlsx',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(4, result)
-        mock_print.assert_called_once_with('resources/missing_config.ini is not a file')
+        self.assertEqual('resources/missing_config.ini is not a file\n', output)
 
-    @patch('reminders.Reminders.print')
-    def test_reminders_run_missing_bad_users(self, mock_print):
+    def test_reminders_run_missing_bad_users(self):
         uut = Reminders()
 
         args = [
@@ -336,15 +350,11 @@ class TestReminders(unittest.TestCase):
             '-s',
             'example/bedrock.xlsx',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(2, result)
-        self.assertEqual(1, mock_print.call_count)
-        # this is a bit hacky, but don't want to print EVERYTHING...
-        message = mock_print.call_args.args[0]
-        self.assertTrue(message.startswith('Invalid users:'))
+        self.assertTrue(output.startswith('Invalid users:'))
 
-    @patch('reminders.Reminders.print')
-    def test_reminders_run_missing_bad_actions(self, mock_print):
+    def test_reminders_run_missing_bad_actions(self):
         uut = Reminders()
 
         args = [
@@ -353,9 +363,6 @@ class TestReminders(unittest.TestCase):
             '-s',
             'example/bedrock.xlsx',
         ]
-        result = uut.run(args)
+        result, output = self.run_and_capture(uut, args)
         self.assertEqual(3, result)
-        self.assertEqual(1, mock_print.call_count)
-        # this is a bit hacky, but don't want to print EVERYTHING...
-        message = mock_print.call_args.args[0]
-        self.assertTrue(message.startswith('Invalid actions:'))
+        self.assertTrue(output.startswith('Invalid actions:'))

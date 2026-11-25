@@ -1,0 +1,83 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+        python-version: [ "3.14" ]
+        include:
+          - os: ubuntu-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.13"
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+      - name: Install the project dependencies
+        run: uv sync --frozen
+      - name: Test
+        run: uv run coverage run --branch --source=reminders -m unittest discover -s tests -v
+        env:
+          COVERAGE_FILE: coverage/.coverage.${{ runner.os }}-py${{ matrix.python-version }}
+          CONTEXT: ${{ runner.os }}-py${{ matrix.python-version }}
+      - name: Store coverage files
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ runner.os }}-${{ matrix.python-version }}
+          path: coverage
+          include-hidden-files: true
+
+  coverage-combine:
+    needs: [test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - name: Install the project dependencies
+        run: uv sync --frozen
+      - name: Get coverage files
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage
+          merge-multiple: true
+      - name: List coverage files
+        run: ls -la coverage
+      - name: Combine coverage
+        run: uv run coverage combine coverage
+      - name: Coverage report
+        run: uv run coverage report --skip-empty --show-missing --include=reminders/*
+      - name: Coverage XML
+        run: uv run coverage xml --include=reminders/*
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
