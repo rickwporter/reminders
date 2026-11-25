@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/rickwporter/reminders/branch/main/graph/badge.svg)](https://codecov.io/gh/rickwporter/reminders)
+
 # Reminders
 
 Welcome to the 'reminders' project. This started as a tool to help automate sending email based on data in an Excel spreadsheet for my wife. Since I'm not a Visual Basic programmer and don't even have Excel installed on my computer, I reached for Python to help.
