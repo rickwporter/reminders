@@ -111,16 +111,9 @@ class Reminders:
         """
         with ExcelFile(filename) as xls:
             sheet = xls.parse(sheetname)
-            values = sheet.to_dict()
-            headers = values.keys()
-            num_values = max([len(_.keys()) for _ in values.values()])
-
-            result = []
-            for row in range(num_values):
-                item = {k: values.get(k, {}).get(row, '') for k in headers}
-                item[ROW_HEADER] = f"{sheetname}:{row + 1}"
-                result.append(item)
-
+            result = sheet.to_dict(orient='records')
+            for row, item in enumerate(result, start=1):
+                item[ROW_HEADER] = f"{sheetname}:{row}"
             return result
 
     def find_user(self, users: List[Dict], username: str) -> Dict:

@@ -25,6 +25,7 @@ class TestReminders(unittest.TestCase):
         uut = Reminders()
         items = uut.sheet_to_dict('example/bedrock.xlsx', 'Actions')
         self.assertEqual(4, len(items))
+        self.assertEqual([f'Actions:{row}' for row in range(1, 5)], [item.get(ROW_HEADER) for item in items])
         first = items[0]
         self.assertEqual('SG1', first.get('ID'))
         self.assertEqual('Fred', first.get('User'))
@@ -41,6 +42,7 @@ class TestReminders(unittest.TestCase):
         uut = Reminders()
         items = uut.sheet_to_dict('example/bedrock.xlsx', 'Users')
         self.assertEqual(4, len(items))
+        self.assertEqual([f'Users:{row}' for row in range(1, 5)], [item.get(ROW_HEADER) for item in items])
         keys = set(['User', 'First', 'Email', 'Aliases', ROW_HEADER])
         first = items[0]
         self.assertEqual(keys, set(first.keys()))
@@ -49,6 +51,11 @@ class TestReminders(unittest.TestCase):
         self.assertEqual('fred@slaterockandgravel.com', first.get('Email'))
         self.assertEqual('FF', first.get('Aliases'))
         self.assertEqual('Users:1', first.get('_row'))
+
+    def test_reminders_sheet_to_dict_empty(self):
+        uut = Reminders()
+        self.assertEqual([], uut.sheet_to_dict('resources/empty.xlsx', 'Headers'))
+        self.assertEqual([], uut.sheet_to_dict('resources/empty.xlsx', 'Blank'))
 
     def test_reminders_find_user(self):
         uut = Reminders()
